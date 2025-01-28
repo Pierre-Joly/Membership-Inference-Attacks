@@ -56,9 +56,9 @@ def main(args):
         sys.exit(1)
 
     # Retrieve serveur URL from environment variable
-    server_url = os.getenv('SERVEUR_URL')
+    server_url = os.getenv('SUBMISSION_API_URL')
     if not server_url:  
-        logger.error("URL not found. Please set the SERVEUR_URL environment variable.")
+        logger.error("URL not found. Please set the SUBMISSION_API_URL environment variable.")
         sys.exit(1)
 
     # Send submission

@@ -25,5 +25,9 @@ attacks:
     reference_data: "data/pub.pt"
     batch_size: 128
 
+  ensemble_rmia:
+    reference_data: "data/pub.pt"
+    batch_size: 128
+
 submission:
   submission_path: "submissions/submission.csv"

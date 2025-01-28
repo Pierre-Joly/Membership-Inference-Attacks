@@ -6,6 +6,7 @@ dist/
 lib/
 *.egg-info/
 build/
+.env
 
 # PyTorch checkpoints
 weights/*.pt

@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import os
 
+from attacks.ensemble_rmia import Ensemble_RMIA
 from attacks.online_lira import OnlineLiRA
 from attacks.random_guess import RandomGuessAttack
 from attacks.offline_lira import OfflineLiRA
@@ -82,6 +83,8 @@ def execute_attack(attack_type: str, model: torch.nn.Module, data: MembershipDat
         attack = OfflineLiRA(**attack_config)
     elif attack_type == 'rmia':
         attack = RMIA(**attack_config)
+    elif attack_type == 'ensemble_rmia':
+        attack = Ensemble_RMIA(**attack_config)
     else:
         logger.error(f"Unknown attack type: {attack_type}")
         raise ValueError(f"Unknown attack type: {attack_type}")
