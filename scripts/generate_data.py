@@ -103,8 +103,8 @@ def generate_submission_csv(ids: list, scores: np.array, output_path: str):
     """
     logger.info("Creating submission CSV")
     submission_df = pd.DataFrame({
-        'ID': ids,
-        'Score': scores
+        'ids': ids,
+        'score': scores
     })
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     submission_df.to_csv(output_path, index=False)
@@ -144,7 +144,7 @@ def main(args):
 
     # Generate submission CSV
     submission_path = config['submission']['submission_path']
-    #generate_submission_csv(data.ids, scores, submission_path)
+    generate_submission_csv(data.ids, scores, submission_path)
 
 
 if __name__ == "__main__":
