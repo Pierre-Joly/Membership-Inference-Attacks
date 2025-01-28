@@ -1,0 +1,29 @@
+device: "mps" 
+
+data:
+  path: "data/priv_out.pt"
+
+model:
+  num_classes: 44
+  trained_weights: "weights/01_MIA_67.pt"
+
+attacks:
+  random_guess:
+
+  online_lira:
+    num_shadow: 64
+    batch_size: 128
+    reference_data: "data/pub.pt"
+
+  offline_lira:
+    num_shadow_models: 64
+    batch_size: 128
+    reference_data: "data/pub.pt"
+
+  rmia:
+    metric: "loss"  # Options: "loss", "confidence", "entropy"
+    reference_data: "data/pub.pt"
+    batch_size: 128
+
+submission:
+  submission_path: "submissions/submission.csv"
