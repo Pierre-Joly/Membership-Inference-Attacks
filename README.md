@@ -32,13 +32,11 @@ This project presents the implementation and evaluation of two Membership Infere
 1. **"Membership Inference Attacks From First Principles"** (LiRA), and 
 2. **"Low-Cost High-Power Membership Inference Attacks"** (RMIA).
 
-We implement both *offline* and *online* variants of these attacks, assess their performance under various settings, and demonstrate how small modifications in code can transition from offline to online modes.
-
 ---
 
 ## Introduction
 
-In this repository, we explore how an adversary can determine whether a specific sample was part of a machine learning model's training set by examining only black-box or gray-box access to the model. The repository provides a unified framework in which:
+In this repository, we explore how an adversary can determine whether a specific sample was part of a machine learning model's training set by examining only black-box. The repository provides two attacks implementations:
 
 - **LiRA** is implemented by computing logit distributions (IN vs. OUT) and comparing them via Gaussian-based likelihood-ratio tests.
 - **RMIA** is implemented by building pairwise likelihood-ratio tests with a population set, approximating \(\Pr(x)\) from reference models, and then deriving a robust membership score.
@@ -63,7 +61,7 @@ In this repository, we explore how an adversary can determine whether a specific
 
 ### Project Structure
 
-The project is organized into a modular structure to facilitate maintainability, scalability, and clarity. Below is an overview of the directory hierarchy:
+Below is an overview of the directory hierarchy:
 
 ```
 Membership_Inference_Attacks/
