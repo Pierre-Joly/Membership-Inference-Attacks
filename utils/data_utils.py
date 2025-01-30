@@ -26,7 +26,7 @@ def get_shadow_dataset(data_priv: MembershipDataset, reference_data: str) -> Con
     """
     Combine private and public data to create a shadow dataset.
 
-    Args:
+    Args:d
         data_priv (MembershipDataset): Private data.
         data_pub (MembershipDataset): Public data.
 

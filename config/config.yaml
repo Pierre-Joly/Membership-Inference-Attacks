@@ -20,14 +20,10 @@ attacks:
     batch_size: 128
     reference_data: "data/pub.pt"
 
-  rmia:
-    metric: "loss"  # Options: "loss", "confidence", "entropy"
-    reference_data: "data/pub.pt"
+  offline_rmia:
+    num_shadow_models: 10
     batch_size: 128
-
-  ensemble_rmia:
     reference_data: "data/pub.pt"
-    batch_size: 128
 
 submission:
   submission_path: "submissions/submission.csv"

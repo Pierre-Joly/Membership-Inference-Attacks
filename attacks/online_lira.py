@@ -23,7 +23,7 @@ class OnlineLiRA(BaseAttack):
 
     def run_attack(self, model: nn.Module, data: MembershipDataset) -> np.ndarray:
         """
-        Perform Online Parallel Likelihood Ratio Attack (LiRA).
+        Perform Online Likelihood Ratio Attack (LiRA).
 
         Args:
             model (nn.Module): The target model.
@@ -34,7 +34,7 @@ class OnlineLiRA(BaseAttack):
         """
         device = get_device()
         model.to(device).eval()
-        logger.info("Starting Online Parallel LiRA Attack")
+        logger.info("Starting Online LiRA Attack")
 
         # Load and prepare public data
         combined_data = get_shadow_dataset(data, self.reference_data)
@@ -57,7 +57,7 @@ class OnlineLiRA(BaseAttack):
         ptr = 0
 
         # Process batches
-        for imgs, labels in tqdm(dataloader, desc="Processing Batches"):
+        for ids, imgs, labels in tqdm(dataloader, desc="Processing Batches"):
             imgs, labels = imgs.to(device), labels.to(device)
             B = imgs.size(0)
 
@@ -68,7 +68,7 @@ class OnlineLiRA(BaseAttack):
                     outputs = shadow_model(imgs)
                     batch_confs = outputs[range(B), labels].cpu().numpy()
                     all_confs.append(batch_confs)
-            all_confs = np.array(all_confs)  # Shape: (num_shadow, batch_size)
+            all_confs = np.array(all_confs)  # [num_shadow, batch_size]
 
             # Get target model confidences
             with torch.no_grad():
@@ -76,7 +76,7 @@ class OnlineLiRA(BaseAttack):
                 target_confs = target_outputs[range(B), labels].cpu().numpy()
 
             # Process the entire batch in parallel
-            is_in_model = incl_matrix[:, ptr: ptr + B]  # Shape: (num_shadow, batch_size)
+            is_in_model = incl_matrix[:, ids]  # [num_shadow, batch_size]
             confs_in = all_confs * is_in_model
             confs_out = all_confs * (~is_in_model)
 
@@ -94,7 +94,7 @@ class OnlineLiRA(BaseAttack):
 
             ptr += B
 
-        logger.info("Online Parallel LiRA Attack Completed")
+        logger.info("Online LiRA Attack Completed")
         return scores
 
     def get_shadow_models(self, base_model: nn.Module, combined_data: torch.utils.data.Dataset, num_models: int) -> tuple:
