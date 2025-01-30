@@ -17,7 +17,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Generate and Send Submission for Membership Inference Attacks")
     parser.add_argument('--config', type=str, default='config/config.yaml', help='Path to the configuration file')
-    parser.add_argument('--attack', type=str, required=True, choices=['random_guess', 'online_lira', 'offline_lira', 'offline_rmia'], help='Type of attack to execute')
+    parser.add_argument('--attack', type=str, required=True, choices=['random_guess', 'online_lira', 'offline_lira', 'offline_rmia', 'online_rmia'], help='Type of attack to execute')
     args = parser.parse_args()
 
     try:

@@ -237,6 +237,8 @@ This ensures that sensitive credentials are not hardcoded in your scripts.
    - `random_guess`
    - `online_lira`
    - `offline_lira`
+   - `online_rmia`
+   - `offline_rmia`
    - `rmia`
 
    *Replace `online_lira` with the attack you wish to execute.*

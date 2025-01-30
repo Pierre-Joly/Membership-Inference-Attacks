@@ -5,9 +5,10 @@ import pandas as pd
 import numpy as np
 import os
 
-from attacks.online_lira import OnlineLiRA
 from attacks.random_guess import RandomGuessAttack
+from attacks.online_lira import OnlineLiRA
 from attacks.offline_lira import OfflineLiRA
+from attacks.online_rmia import OnlineRMIA
 from attacks.offline_rmia import OfflineRMIA
 from datasets.dataset import MembershipDataset
 from models.resnet18 import ResNet18Model
@@ -82,6 +83,8 @@ def execute_attack(attack_type: str, model: torch.nn.Module, data: MembershipDat
         attack = OfflineLiRA(**attack_config)
     elif attack_type == 'offline_rmia':
         attack = OfflineRMIA(**attack_config)
+    elif attack_type == 'online_rmia':
+        attack = OnlineRMIA(**attack_config)
     else:
         logger.error(f"Unknown attack type: {attack_type}")
         raise ValueError(f"Unknown attack type: {attack_type}")
