@@ -5,7 +5,7 @@ from utils.device_manager import get_device
 from utils.data_loader import membership_collate_fn
 from utils.logger import logger
 
-def train_shadow_model(shadow_model: nn.Module, dataset: torch.utils.data.Dataset, lr: float = 0.01, epochs: int = 1) -> None:
+def train_shadow_model(shadow_model: nn.Module, dataset: torch.utils.data.Dataset, lr: float = 0.01, epochs: int = 20) -> None:
     """
     Train a shadow model on the provided dataset.
 

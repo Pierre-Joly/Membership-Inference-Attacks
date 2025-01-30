@@ -13,7 +13,6 @@ weights/*.pt
 
 # Data
 data/*.pt
-submissions/*.csv
 
 # Logs
 logs/
