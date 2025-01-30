@@ -57,7 +57,7 @@ class OnlineLiRA(BaseAttack):
         ptr = 0
 
         # Process batches
-        for ids, imgs, labels in tqdm(dataloader, desc="Processing Batches"):
+        for imgs, labels in tqdm(dataloader, desc="Processing Batches"):
             imgs, labels = imgs.to(device), labels.to(device)
             B = imgs.size(0)
 
@@ -76,7 +76,7 @@ class OnlineLiRA(BaseAttack):
                 target_confs = target_outputs[range(B), labels].cpu().numpy()
 
             # Process the entire batch in parallel
-            is_in_model = incl_matrix[:, ids]  # [num_shadow, batch_size]
+            is_in_model = incl_matrix[:, ptr: ptr + B]  # [num_shadow, batch_size]
             confs_in = all_confs * is_in_model
             confs_out = all_confs * (~is_in_model)
 

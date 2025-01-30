@@ -113,7 +113,7 @@ class OfflineRMIA(BaseAttack):
         ptr = 0
 
         with torch.no_grad():
-            for _, imgs, labels in tqdm(loader, total=len(loader), desc=description):
+            for imgs, labels in tqdm(loader, total=len(loader), desc=description):
                 imgs, labels = imgs.to(device), labels.to(device)
 
                 B = imgs.size(0)
@@ -135,7 +135,7 @@ class OfflineRMIA(BaseAttack):
                 pr = 0.5 * ((1.0 + self.a_param) * pr_out + (1.0 - self.a_param))
 
                 # Compute Pr(. | \theta) / Pr(.)
-                ratio[ptr: ptr+B] = conf / (pr + 1e-12)
+                ratio[ptr: ptr+B] = conf / np.maximum(pr, 1e-12)
 
                 ptr += B
     

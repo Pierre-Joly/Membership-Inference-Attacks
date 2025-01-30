@@ -54,7 +54,7 @@ class OfflineLiRA(BaseAttack):
         ptr = 0
 
         # Iterate over each example
-        for _, imgs, labels in tqdm(data_loader, desc="Offline LiRA"):
+        for imgs, labels in tqdm(data_loader, desc="Offline LiRA"):
             imgs, labels = imgs.to(device), labels.to(device)
             B = imgs.size(0)
 

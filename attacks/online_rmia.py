@@ -47,7 +47,7 @@ class OnlineRMIA(BaseAttack):
         combined_data = get_shadow_dataset(data, self.reference_data)
 
         # Train shadow models with index tracking
-        shadow_models, inclusions = self.get_shadow_models(model, combined_data, self.num_shadow)
+        shadow_models, inclusions = self.get_shadow_models(model, combined_data, self.num_shadow_models)
 
         # Precompute inclusion matrix (num_shadow x num_targets)
         num_targets = len(data)
@@ -116,41 +116,41 @@ class OnlineRMIA(BaseAttack):
     def get_ratio(self, ratio, model, shadow_models, loader, incl_matrix, device, description):
         ptr = 0
 
-        for (ids, imgs, labels) in tqdm(loader, desc=description):
-            imgs, labels = imgs.to(device), labels.to(device)
+        with torch.no_grad():
+            for (imgs, labels) in tqdm(loader, desc=description):
+                imgs, labels = imgs.to(device), labels.to(device)
 
-            B = imgs.size(0)
+                B = imgs.size(0)
 
-            # Compute Pr(. | \theta)
-            with torch.no_grad():
+                # Compute Pr(. | \theta)
                 logits = model(imgs)
                 probs = F.softmax(logits, dim=1)
                 conf = probs[range(B), labels].cpu().numpy()  # shape [B]
 
-            # Compute Pr(.)_{OUT}
-            shadow_conf = np.zeros((self.num_shadow_models, B), dtype=np.float32) # [num_shadow_models, B]
-            for idx, sm in enumerate(shadow_models):
-                probs_sm = F.softmax(sm(imgs), dim=1) # [B, num_classes]
-                conf_sm = probs_sm[range(B), labels].cpu().numpy() # [B]
-                shadow_conf[idx] = conf_sm # [num_shadow_models, B]
+                # Compute Pr(.)_{OUT}
+                shadow_conf = np.zeros((self.num_shadow_models, B), dtype=np.float32) # [num_shadow_models, B]
+                for idx, sm in enumerate(shadow_models):
+                    probs_sm = F.softmax(sm(imgs), dim=1) # [B, num_classes]
+                    conf_sm = probs_sm[range(B), labels].cpu().numpy() # [B]
+                    shadow_conf[idx] = conf_sm # [num_shadow_models, B]
 
-            # Compute Pr(.)_{IN} and Pr(z)_{OUT}
-            pr = np.zeros(B, dtype=np.float32)
+                # Compute Pr(.)_{IN} and Pr(z)_{OUT}
+                pr = np.zeros(B, dtype=np.float32)
 
-            is_in_model = incl_matrix[:, ids]  # [num_shadow, batch_size]
-            confs_in = shadow_conf * is_in_model
-            confs_out = shadow_conf * (~is_in_model)
+                is_in_model = incl_matrix[:, ptr: ptr + B]  # [num_shadow, batch_size]
+                confs_in = shadow_conf * is_in_model
+                confs_out = shadow_conf * (~is_in_model)
 
-            pr_in = confs_in.mean(axis=0)
-            pr_out = confs_out.mean(axis=0)
+                pr_in = confs_in.mean(axis=0)
+                pr_out = confs_out.mean(axis=0)
 
-            # Compute Pr(z)
-            pr = 0.5 * (pr_in + pr_out)
+                # Compute Pr(z)
+                pr = 0.5 * (pr_in + pr_out)
 
-            # Compute Pr(z | \theta) / Pr(z)
-            ratio[ptr: ptr + B] = conf / np.maximum(pr, 1e-12)
+                # Compute Pr(z | \theta) / Pr(z)
+                ratio[ptr: ptr + B] = conf / np.maximum(pr, 1e-12)
 
-            ptr += B
+                ptr += B
 
     def get_z_loader(self, data, population_size, batch_size):
         z_indices = np.random.choice(len(data), size=self.population_size, replace=False)
@@ -169,7 +169,7 @@ class OnlineRMIA(BaseAttack):
         Returns:
             np.ndarray: Inclusion matrix of shape (num_shadow, num_targets).
         """
-        incl_matrix = np.zeros((self.num_shadow, num_targets), dtype=bool)
+        incl_matrix = np.zeros((self.num_shadow_models, num_targets), dtype=bool)
         for model_idx, indices in enumerate(inclusions):
             private_indices = [idx for idx in indices if idx < num_targets]
             incl_matrix[model_idx, private_indices] = True

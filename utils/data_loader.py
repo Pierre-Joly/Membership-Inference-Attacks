@@ -8,14 +8,13 @@ import torch
 from typing import List, Tuple
 
 def membership_collate_fn(batch: List[Tuple[int, torch.Tensor, int, int]]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    ids, imgs, labels, _ = zip(*batch)
+    _, imgs, labels, _ = zip(*batch)
 
     # Convert to tensors
-    ids = torch.tensor(ids, dtype=torch.int64) # indices
     imgs = torch.stack(imgs)  # Stack image tensors
     labels = torch.tensor(labels, dtype=torch.int64)  # Labels
 
-    return ids, imgs, labels
+    return imgs, labels
 
 
 def get_data_loader(dataset: MembershipDataset, batch_size: int = 128, shuffle: bool = False) -> DataLoader:

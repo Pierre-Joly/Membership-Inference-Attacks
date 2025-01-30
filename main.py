@@ -56,7 +56,7 @@ def main():
             sys.exit(1)
 
         # Send submission
-        send_submission(config['submission']['submission_path'], server_url, api_token)
+        #send_submission(config['submission']['submission_path'], server_url, api_token)
 
     except Exception as e:
         logger.error(f"An error occurred during the submission process: {e}")

@@ -11,7 +11,7 @@ attacks:
   random_guess:
 
   online_lira:
-    num_shadow: 64
+    num_shadow_models: 64
     batch_size: 128
     reference_data: "data/pub.pt"
 
@@ -21,7 +21,7 @@ attacks:
     reference_data: "data/pub.pt"
 
   online_rmia:
-    num_shadow_models: 10
+    num_shadow_models: 1
     batch_size: 128
     reference_data: "data/pub.pt"
 
