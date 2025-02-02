@@ -5,14 +5,12 @@ from tqdm import tqdm
 
 from attacks.base_attack import BaseAttack
 from datasets.dataset import MembershipDataset
-from datasets.subset import MembershipSubset
 from utils.data_loader import get_data_loader
 from utils.data_utils import get_out_dataset
 from utils.device_manager import get_device
 from utils.logger import logger
-from utils.model_utils import clone_model
 from utils.statistics import gaussian_cdf
-from utils.train_utils import train_shadow_model
+from utils.shadow_models import get_off_shadow_models
 
 
 class OfflineLiRA(BaseAttack):
@@ -40,7 +38,7 @@ class OfflineLiRA(BaseAttack):
         data_out = get_out_dataset(self.reference_data)
 
         # Define the shadow models
-        shadow_models = self.get_shadow_models(model, data_out, self.num_shadow_models)
+        shadow_models = get_off_shadow_models(model, data_out, self.num_shadow_models)
 
         # Prepare DataLoader for the target data
         data_loader = get_data_loader(
@@ -86,33 +84,4 @@ class OfflineLiRA(BaseAttack):
 
         logger.info("Offline LiRA Attack Completed")
         return attack_results
-
-    def get_shadow_models(self, base_model: nn.Module, data_out: MembershipDataset, num_models: int) -> tuple:
-        """
-        Train shadow models on out-of-distribution data.
-
-        Args:
-            base_model (nn.Module): The base model to clone.
-            data_out (MembershipDataset): Out-of-distribution data.
-            num_models (int): Number of shadow models to train.
-
-        Returns:
-            tuple: Shadow models and their inclusion indices.
-        """
-        shadow_models = []
-        sample_size = len(data_out) // 2
-
-        for _ in tqdm(range(num_models), desc="Training Shadow Models"):
-            # Sample indices from data_out
-            indices = np.random.choice(len(data_out), size=sample_size, replace=False).tolist()
-            subset_out = MembershipSubset(data_out, indices)
-
-            # Clone and train model
-            model_clone = clone_model(base_model)
-            train_shadow_model(model_clone, subset_out)
-            model_clone.eval()
-
-            shadow_models.append(model_clone)
-
-        return shadow_models
 

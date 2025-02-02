@@ -4,16 +4,17 @@ import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 
+from torch.utils.data import ConcatDataset
+
 from attacks.base_attack import BaseAttack
-from datasets.dataset import MembershipDataset
+from datasets.dataset import MembershipDataset, transform_test
 from datasets.subset import MembershipSubset
 from utils.data_loader import get_data_loader
 from utils.data_utils import get_out_dataset
 from utils.device_manager import get_device
 from utils.logger import logger
-from utils.model_utils import clone_model
 from utils.statistics import compute_quantiles 
-from utils.train_utils import train_shadow_model
+from utils.shadow_models import get_off_shadow_models
 
 
 class OfflineRMIA(BaseAttack):
@@ -45,11 +46,29 @@ class OfflineRMIA(BaseAttack):
         model.to(device).eval()
         logger.info("Starting Offline RMIA Attack")
 
+        ###
+        data_pub: MembershipDataset = torch.load(self.reference_data, map_location='cpu', weights_only=False)
+        member_indices = [i for i, m in enumerate(data_pub.membership) if m == 1]
+        non_member_indices = [i for i, m in enumerate(data_pub.membership) if m == 0]
+        data_in = MembershipSubset(data_pub, member_indices)
+        data_out = MembershipSubset(data_pub, non_member_indices)
+        data = ConcatDataset([data_in, data_out])
+        ###
+
         # Get out of distribution data
         data_out = get_out_dataset(self.reference_data)
 
         # Define the shadow models
-        shadow_models = self.get_shadow_models(model, data_out, self.num_shadow_models)
+        shadow_models = get_off_shadow_models(model, data_out, self.num_shadow_models)
+
+        ###
+
+        # Change transform for inference
+        transform = transform_test()
+        data_out.transform = transform
+        data.transform = transform
+
+        ###
 
         # Get loader of population z
         z_loader = self.get_z_loader(data_out, self.population_size, self.batch_size)
@@ -79,35 +98,7 @@ class OfflineRMIA(BaseAttack):
 
         logger.info("Offline RMIA Attack Completed")
         return attack_results
-
-    def get_shadow_models(self, base_model: nn.Module, data_out: MembershipDataset, num_models: int) -> tuple:
-        """
-        Train shadow models on out-of-distribution data.
-
-        Args:
-            base_model (nn.Module): The base model to clone.
-            data_out (MembershipDataset): Out-of-distribution data.
-            num_models (int): Number of shadow models to train.
-
-        Returns:
-            tuple: Shadow models and their inclusion indices.
-        """
-        shadow_models = []
-        sample_size = len(data_out) // 2
-
-        for _ in tqdm(range(num_models), desc="Training Shadow Models"):
-            # Sample indices from data_out
-            indices = np.random.choice(len(data_out), size=sample_size, replace=False).tolist()
-            subset_out = MembershipSubset(data_out, indices)
-
-            # Clone and train model
-            model_clone = clone_model(base_model)
-            train_shadow_model(model_clone, subset_out)
-            model_clone.eval()
-
-            shadow_models.append(model_clone)
-
-        return shadow_models
+    
     
     def get_ratio(self, ratio, model, shadow_models, loader, device, description):
         ptr = 0
@@ -139,6 +130,7 @@ class OfflineRMIA(BaseAttack):
 
                 ptr += B
     
+
     def get_z_loader(self, data_out, population_size, batch_size):
         z_indices = np.random.choice(len(data_out), size=self.population_size, replace=False)
         z_subset = MembershipSubset(data_out, z_indices)
