@@ -14,8 +14,8 @@ from utils.shadow_models import get_on_shadow_models, create_inclusion_matrix
 
 
 class OnlineLiRA(BaseAttack):
-    def __init__(self, num_shadow: int = 64, batch_size: int = 128, reference_data: str = "data/pub.pt"):
-        self.num_shadow = num_shadow
+    def __init__(self, num_shadow_models: int = 64, batch_size: int = 128, reference_data: str = "data/pub.pt"):
+        self.num_shadow_models = num_shadow_models
         self.batch_size = batch_size
         self.reference_data = reference_data
 
@@ -38,11 +38,11 @@ class OnlineLiRA(BaseAttack):
         combined_data = get_shadow_dataset(data, self.reference_data)
 
         # Train shadow models with index tracking
-        shadow_models, inclusions = get_on_shadow_models(model, combined_data, self.num_shadow)
+        shadow_models, inclusions = get_on_shadow_models(combined_data, self.num_shadow_models)
 
         # Precompute inclusion matrix (num_shadow x num_targets)
         num_targets = len(data)
-        incl_matrix = create_inclusion_matrix(inclusions, num_targets)
+        incl_matrix = create_inclusion_matrix(self.num_shadow_models, inclusions, num_targets)
 
         # Batch processing setup
         dataloader = get_data_loader(

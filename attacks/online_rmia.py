@@ -46,11 +46,11 @@ class OnlineRMIA(BaseAttack):
         combined_data = get_shadow_dataset(data, self.reference_data)
 
         # Train shadow models with index tracking
-        shadow_models, inclusions = get_on_shadow_models(model, combined_data, self.num_shadow_models)
+        shadow_models, inclusions = get_on_shadow_models(combined_data, self.num_shadow_models)
 
         # Precompute inclusion matrix (num_shadow x num_targets)
         num_targets = len(data)
-        incl_matrix = create_inclusion_matrix(inclusions, num_targets)
+        incl_matrix = create_inclusion_matrix(self.num_shadow_models, inclusions, num_targets)
 
         # Get loader of population z
         z_loader = self.get_z_loader(combined_data, self.population_size, self.batch_size)

@@ -3,9 +3,6 @@ import torch
 from typing import Tuple, Optional, Any, List
 from torchvision import transforms
 
-from utils.logger import logger
-
-
 class TaskDataset(Dataset):
     """
     A base dataset class for tasks involving image data and labels.
@@ -51,18 +48,36 @@ class MembershipDataset(TaskDataset):
         membership (List[int]): List indicating membership status for each data point.
     """
 
-    def __init__(self, data_path: str, transform: Optional[Any] = None):
+    def __init__(self, data_path: str, train: bool = True):
         self.membership: List[int] = []
 
-        mean = [0.2980, 0.2962, 0.2987]
-        std = [0.2886, 0.2875, 0.2889]
-        self.transform = transforms.Compose([
-            transforms.Normalize(mean=mean, std=std)
-        ])
+        if train:
+            self.transform = transform_train()
+        else:
+            self.transform = transform_test()
 
         super().__init__(self.transform)
+    
 
     def __getitem__(self, index: int) -> Tuple[int, torch.Tensor, int, int]:
         id_, img, label = super().__getitem__(index)
         membership = self.membership[index]
         return id_, img, label, membership
+
+def transform_train():
+    mean = [0.2980, 0.2962, 0.2987]
+    std = [0.2886, 0.2875, 0.2889]
+    return transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.Normalize(mean=mean, std=std)
+        ])
+
+def transform_test():
+    mean = [0.2980, 0.2962, 0.2987]
+    std = [0.2886, 0.2875, 0.2889]
+    return transforms.Compose([
+            transforms.Normalize(mean=mean, std=std)
+        ])
+
+

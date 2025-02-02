@@ -1,50 +1,73 @@
 import torch
-import torch.nn as nn
+import torch.multiprocessing as mp
 import numpy as np
 from tqdm import tqdm
 
-from datasets.dataset import MembershipDataset
 from datasets.subset import MembershipSubset
 from utils.model_utils import clone_model
-from utils.train_utils import train_shadow_model
+from utils.logger import logger
+from utils.train_utils import single_worker, ddp_worker, train_shadow_model_common
+from utils.device_manager import get_device
 
 
-def get_off_shadow_models(self, base_model: nn.Module, data_out: MembershipDataset, num_models: int) -> tuple:
+def get_off_shadow_models(data_out, num_models: int) -> tuple:
     """
-    Train shadow models on out-of-distribution data.
-
+    Train several shadow models on out-of-distribution data, adapting the training mode
+    (multi-GPU DDP or single-device) based on the available hardware.
+    
     Args:
-        base_model (nn.Module): The base model to clone.
         data_out (MembershipDataset): Out-of-distribution data.
         num_models (int): Number of shadow models to train.
-
+    
     Returns:
-        tuple: Shadow models and their inclusion indices.
+        tuple: A tuple of trained shadow models.
     """
     shadow_models = []
-    sample_size = len(data_out) // 2
+    sample_size = len(data_out) // 2  # Size of the training subset for each model
 
-    for _ in tqdm(range(num_models), desc="Training Shadow Models"):
-        # Sample indices from data_out
+    # Determine whether to use multi-GPU DDP (if at least 2 CUDA devices are available)
+    use_ddp = torch.cuda.is_available() and (torch.cuda.device_count() > 1)
+    if use_ddp:
+        available_gpus = torch.cuda.device_count()
+        world_size = available_gpus
+        logger.info(f"Multi-GPU mode enabled (using {world_size} GPUs per shadow model).")
+    else:
+        logger.info("Single-device mode enabled (using one GPU/MPS/CPU).")
+    
+    manager = mp.Manager() if use_ddp else None
+
+    for model_index in tqdm(range(num_models), desc="Training Shadow Models"):
+        # Select a random subset for training this shadow model
         indices = np.random.choice(len(data_out), size=sample_size, replace=False).tolist()
         subset_out = MembershipSubset(data_out, indices)
-
-        # Clone and train model
-        model_clone = clone_model(base_model)
-        train_shadow_model(model_clone, subset_out)
+        
+        if use_ddp:
+            return_dict = manager.dict()
+            mp.spawn(
+                ddp_worker,
+                args=(world_size, subset_out, return_dict, model_index, 256),
+                nprocs=world_size,
+                join=True
+            )
+            state_dict = return_dict[model_index]
+        else:
+            state_dict = single_worker(subset_out, batch_size=256)
+        
+        # Clone the base model and load the trained state_dict
+        device = get_device()
+        model_clone = clone_model(device=device)
+        model_clone.load_state_dict(state_dict, strict=True)
         model_clone.eval()
-
         shadow_models.append(model_clone)
+    
+    return tuple(shadow_models)
 
-    return shadow_models
 
-
-def get_on_shadow_models(self, base_model: nn.Module, combined_data: torch.utils.data.Dataset, num_models: int) -> tuple:
+def get_on_shadow_models(combined_data: torch.utils.data.Dataset, num_models: int) -> tuple:
     """
     Train shadow models and track their inclusions.
 
     Args:
-        base_model (nn.Module): The base model to clone.
         combined_data (torch.utils.data.Dataset): Combined shadow dataset.
         num_models (int): Number of shadow models to train.
 
@@ -61,8 +84,9 @@ def get_on_shadow_models(self, base_model: nn.Module, combined_data: torch.utils
         subset = MembershipSubset(combined_data, indices)
 
         # Clone and train model
-        model_clone = clone_model(base_model)
-        train_shadow_model(model_clone, subset)
+        device = get_device()
+        model_clone = clone_model(device=device)
+        train_shadow_model_common(model=model_clone, subset=subset, device=device)
         model_clone.eval()
 
         shadow_models.append(model_clone)
@@ -71,7 +95,7 @@ def get_on_shadow_models(self, base_model: nn.Module, combined_data: torch.utils
     return shadow_models, inclusion_tracker
 
 
-def create_inclusion_matrix(self, inclusions: list, num_targets: int) -> np.ndarray:
+def create_inclusion_matrix(num_shadow: int, inclusions: list, num_targets: int) -> np.ndarray:
     """
     Create an inclusion matrix indicating which shadow models include which targets.
 
@@ -82,7 +106,7 @@ def create_inclusion_matrix(self, inclusions: list, num_targets: int) -> np.ndar
     Returns:
         np.ndarray: Inclusion matrix of shape (num_shadow, num_targets).
     """
-    incl_matrix = np.zeros((self.num_shadow, num_targets), dtype=bool)
+    incl_matrix = np.zeros((num_shadow, num_targets), dtype=bool)
     for model_idx, indices in enumerate(inclusions):
         private_indices = [idx for idx in indices if idx < num_targets]
         incl_matrix[model_idx, private_indices] = True

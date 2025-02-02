@@ -29,7 +29,7 @@ def load_model(model_path: str, num_classes: int, device: torch.device) -> torch
     Returns:
         torch.nn.Module: Loaded model.
     """
-    model = ResNet18Model(num_classes=num_classes)
+    model = ResNet18Model()
     if not os.path.exists(model_path):
         logger.error(f"Model file {model_path} does not exist.")
         raise FileNotFoundError(f"Model file {model_path} not found.")
@@ -106,7 +106,7 @@ def generate_submission_csv(ids: list, scores: np.array, output_path: str):
     """
     logger.info("Creating submission CSV")
     submission_df = pd.DataFrame({
-        'ids': ids,
+        'ids': np.arange(len(scores)),
         'score': scores
     })
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

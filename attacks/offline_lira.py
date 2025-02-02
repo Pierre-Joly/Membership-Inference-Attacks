@@ -38,7 +38,7 @@ class OfflineLiRA(BaseAttack):
         data_out = get_out_dataset(self.reference_data)
 
         # Define the shadow models
-        shadow_models = get_off_shadow_models(model, data_out, self.num_shadow_models)
+        shadow_models = get_off_shadow_models(data_out, self.num_shadow_models)
 
         # Prepare DataLoader for the target data
         data_loader = get_data_loader(

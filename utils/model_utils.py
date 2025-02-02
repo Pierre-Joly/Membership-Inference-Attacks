@@ -1,10 +1,9 @@
-import copy
 import torch.nn as nn
 
-from utils.device_manager import get_device
+from models.resnet18 import ResNet18Model
 from utils.logger import logger
 
-def clone_model(base_model: nn.Module) -> nn.Module:
+def clone_model(device) -> nn.Module:
     """
     Clone the base model. If no base model is provided, initialize a new ResNet18.
 
@@ -14,7 +13,8 @@ def clone_model(base_model: nn.Module) -> nn.Module:
     Returns:
         nn.Module: Cloned model.
     """
-    cloned_model = copy.deepcopy(base_model)
-    cloned_model.to(get_device())
+    cloned_model = ResNet18Model()
+    cloned_model.to(device)
     logger.info("Cloned model moved to device")
     return cloned_model
+
