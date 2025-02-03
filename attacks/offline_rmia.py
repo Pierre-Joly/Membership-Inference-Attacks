@@ -46,29 +46,16 @@ class OfflineRMIA(BaseAttack):
         model.to(device).eval()
         logger.info("Starting Offline RMIA Attack")
 
-        ###
-        data_pub: MembershipDataset = torch.load(self.reference_data, map_location='cpu', weights_only=False)
-        member_indices = [i for i, m in enumerate(data_pub.membership) if m == 1]
-        non_member_indices = [i for i, m in enumerate(data_pub.membership) if m == 0]
-        data_in = MembershipSubset(data_pub, member_indices)
-        data_out = MembershipSubset(data_pub, non_member_indices)
-        data = ConcatDataset([data_in, data_out])
-        ###
-
         # Get out of distribution data
         data_out = get_out_dataset(self.reference_data)
 
         # Define the shadow models
         shadow_models = get_off_shadow_models(data_out, self.num_shadow_models)
 
-        ###
-
         # Change transform for inference
         transform = transform_test()
         data_out.transform = transform
         data.transform = transform
-
-        ###
 
         # Get loader of population z
         z_loader = self.get_z_loader(data_out, self.population_size, self.batch_size)
