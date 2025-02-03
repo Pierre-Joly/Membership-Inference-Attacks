@@ -25,33 +25,12 @@ def get_off_shadow_models(data_out, num_models: int) -> tuple:
     shadow_models = []
     sample_size = len(data_out) // 2  # Size of the training subset for each model
 
-    # Determine whether to use multi-GPU DDP (if at least 2 CUDA devices are available)
-    use_ddp = torch.cuda.is_available() and (torch.cuda.device_count() > 1)
-    if use_ddp:
-        available_gpus = torch.cuda.device_count()
-        world_size = available_gpus
-        logger.info(f"Multi-GPU mode enabled (using {world_size} GPUs per shadow model).")
-    else:
-        logger.info("Single-device mode enabled (using one GPU/MPS/CPU).")
-    
-    manager = mp.Manager() if use_ddp else None
-
-    for model_index in tqdm(range(num_models), desc="Training Shadow Models"):
+    for _ in tqdm(range(num_models), desc="Training Shadow Models"):
         # Select a random subset for training this shadow model
         indices = np.random.choice(len(data_out), size=sample_size, replace=False).tolist()
         subset_out = MembershipSubset(data_out, indices)
         
-        if use_ddp:
-            return_dict = manager.dict()
-            mp.spawn(
-                ddp_worker,
-                args=(world_size, subset_out, return_dict, model_index, 256),
-                nprocs=world_size,
-                join=True
-            )
-            state_dict = return_dict[model_index]
-        else:
-            state_dict = single_worker(subset_out, batch_size=256)
+        state_dict = single_worker(subset_out, batch_size=256)
         
         # Clone the base model and load the trained state_dict
         device = get_device()
