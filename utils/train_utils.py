@@ -28,7 +28,7 @@ def train_shadow_model_common(model, subset, device, batch_size=256, num_workers
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
     criterion = nn.CrossEntropyLoss()
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90], gamma=0.1)
-    epochs = 1
+    epochs = 100
     
     for epoch in range(epochs):
         epoch_loss = 0.0
