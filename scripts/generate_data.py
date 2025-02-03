@@ -106,7 +106,7 @@ def generate_submission_csv(ids: list, scores: np.array, output_path: str):
     """
     logger.info("Creating submission CSV")
     submission_df = pd.DataFrame({
-        'ids': np.arange(len(scores)),
+        'ids': ids,
         'score': scores
     })
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
