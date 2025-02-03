@@ -8,7 +8,7 @@ from attacks.base_attack import BaseAttack
 from datasets.dataset import MembershipDataset
 from datasets.subset import MembershipSubset
 from utils.data_loader import get_data_loader
-from utils.data_utils import get_shadow_dataset
+from utils.data_utils import get_shadow_dataset, get_out_dataset
 from utils.device_manager import get_device
 from utils.logger import logger
 from utils.statistics import compute_quantiles 
@@ -43,6 +43,7 @@ class OnlineRMIA(BaseAttack):
         logger.info("Starting Online RMIA Attack")
 
         # Load and prepare public data
+        data_out = get_out_dataset(self.reference_data)
         combined_data = get_shadow_dataset(data, self.reference_data)
 
         # Train shadow models with index tracking
@@ -53,7 +54,7 @@ class OnlineRMIA(BaseAttack):
         incl_matrix = create_inclusion_matrix(self.num_shadow_models, inclusions, num_targets)
 
         # Get loader of population z
-        z_loader = self.get_z_loader(combined_data, self.population_size, self.batch_size)
+        z_loader = self.get_z_loader(data_out, self.population_size, self.batch_size)
 
         # Compute population ratio
         population_ratio = np.zeros(self.population_size, dtype=np.float32)

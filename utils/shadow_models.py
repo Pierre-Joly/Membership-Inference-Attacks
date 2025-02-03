@@ -60,6 +60,8 @@ def get_on_shadow_models(combined_data: torch.utils.data.Dataset, num_models: in
     for _ in tqdm(range(num_models), desc="Training Shadow Models"):
         # Sample indices from combined dataset
         indices = np.random.choice(len(combined_data), size=sample_size, replace=False).tolist()
+        in_indices = [idx for idx in indices if getattr(combined_data, 'membership', [0]*len(combined_data))[idx] == 1]
+
         subset = MembershipSubset(combined_data, indices)
 
         # Clone and train model
@@ -69,7 +71,7 @@ def get_on_shadow_models(combined_data: torch.utils.data.Dataset, num_models: in
         model_clone.eval()
 
         shadow_models.append(model_clone)
-        inclusion_tracker.append(set(indices))
+        inclusion_tracker.append(set(in_indices))
 
     return shadow_models, inclusion_tracker
 
@@ -87,7 +89,6 @@ def create_inclusion_matrix(num_shadow: int, inclusions: list, num_targets: int)
     """
     incl_matrix = np.zeros((num_shadow, num_targets), dtype=bool)
     for model_idx, indices in enumerate(inclusions):
-        private_indices = [idx for idx in indices if idx < num_targets]
-        incl_matrix[model_idx, private_indices] = True
+        incl_matrix[model_idx, list(indices)] = True
     return incl_matrix
     
