@@ -22,7 +22,7 @@ class OfflineRMIA(BaseAttack):
                 batch_size: int = 128,
                 reference_data: str = "data/pub.pt",
                 population_size:int = 5000,
-                a_param: float = 0.3,
+                a_param: float = 0.5,
                 gamma: float = 1.0):
         self.num_shadow_models = num_shadow_models
         self.batch_size = batch_size
