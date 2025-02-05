@@ -21,13 +21,11 @@ class OfflineRMIA(BaseAttack):
     def __init__(self, num_shadow_models: int = 64,
                 batch_size: int = 128,
                 reference_data: str = "data/pub.pt",
-                population_size:int = 5000,
                 a_param: float = 0.5,
                 gamma: float = 1.0):
         self.num_shadow_models = num_shadow_models
         self.batch_size = batch_size
         self.reference_data = reference_data
-        self.population_size = population_size
         self.a_param = a_param
         self.gamma = gamma
 
@@ -58,10 +56,10 @@ class OfflineRMIA(BaseAttack):
         data.transform = transform
 
         # Get loader of population z
-        z_loader = self.get_z_loader(data_out, self.population_size, self.batch_size)
+        z_loader = self.get_z_loader(data_out, self.batch_size)
 
         # Compute population ratio
-        population_ratio = np.zeros(self.population_size, dtype=np.float32)
+        population_ratio = np.zeros(len(data_out), dtype=np.float32)
         self.get_ratio("Z", population_ratio, model, shadow_models, z_loader, device, "Computing z ratio")
 
         # Sort to efficiently compute quantiles
@@ -119,15 +117,13 @@ class OfflineRMIA(BaseAttack):
                     logger.error(error_msg)
                     raise ValueError(error_msg)
 
-                # # Compute ratio = Pr(. | θ) / Pr(.)
+                # Compute ratio = Pr(. | θ) / Pr(.)
                 ratio[ptr: ptr+B] = conf / np.maximum(pr, 1e-12)
 
                 ptr += B
     
 
-    def get_z_loader(self, data_out, population_size, batch_size):
-        z_indices = np.random.choice(len(data_out), size=self.population_size, replace=False)
-        z_subset = MembershipSubset(data_out, z_indices)
-        z_loader = get_data_loader(z_subset, batch_size=self.batch_size, shuffle=False)
+    def get_z_loader(self, data_out, batch_size):
+        z_loader = get_data_loader(data_out, batch_size=self.batch_size, shuffle=False)
         return z_loader
     
