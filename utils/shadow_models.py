@@ -1,12 +1,10 @@
 import torch
-import torch.multiprocessing as mp
 import numpy as np
 from tqdm import tqdm
 
 from datasets.subset import MembershipSubset
 from utils.model_utils import clone_model
-from utils.logger import logger
-from utils.train_utils import single_worker, ddp_worker, train_shadow_model_common
+from utils.train_utils import single_worker, train_shadow_model_common
 from utils.device_manager import get_device
 
 

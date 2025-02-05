@@ -1,10 +1,7 @@
-import os
 import torch
 import torch.nn as nn
 from utils.data_loader import get_data_loader
 from utils.device_manager import get_device
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
 from utils.model_utils import clone_model
 
 def train_shadow_model_common(model, subset, device, batch_size=256, num_workers=8, info_prefix=""):
@@ -45,51 +42,6 @@ def train_shadow_model_common(model, subset, device, batch_size=256, num_workers
         scheduler.step()
     
     return model.state_dict()
-
-
-def ddp_worker(rank, world_size, subset, return_dict, model_index, batch_size=256):
-    """
-    DDP worker function to train one shadow model across multiple GPUs.
-    
-    Args:
-        rank (int): Rank of the process.
-        world_size (int): Total number of processes (e.g., 2).
-        subset (Dataset): Training subset.
-        return_dict (dict): A shared dictionary for returning the state_dict.
-        model_index (int): Index of the shadow model.
-        epochs (int, optional): Number of epochs.
-        batch_size (int, optional): Batch size.
-    """
-    # Initialize the process group for DDP with NCCL backend (for CUDA)
-    os.environ['MASTER_ADDR'] = '127.0.0.1'
-    os.environ['MASTER_PORT'] = '29500'
-    dist.init_process_group(backend='nccl', rank=rank, world_size=world_size)
-    
-    # Set the device for this process
-    device = torch.device(f'cuda:{rank}')
-    torch.cuda.set_device(device)
-    
-    # Create a new instance of the model and load the base state
-    model = clone_model(device=device)
-    
-    # Wrap the model in DDP so that it uses the GPU corresponding to the rank
-    ddp_model = DDP(model, device_ids=[rank])
-    
-    # Use the common training loop; include an info prefix for logging
-    state_dict = train_shadow_model_common(
-        model=ddp_model,
-        subset=subset,
-        device=device,
-        batch_size=batch_size,
-        num_workers=8,
-        info_prefix=f"[Shadow Model {model_index} | DDP]"
-    )
-    
-    # Only rank 0 returns the state_dict
-    if rank == 0:
-        return_dict[model_index] = state_dict
-    
-    dist.destroy_process_group()
 
 def single_worker(subset, batch_size=256):
     """
