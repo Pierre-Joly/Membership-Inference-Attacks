@@ -58,7 +58,7 @@ class OnlineRMIA(BaseAttack):
 
         # Compute population ratio
         population_ratio = np.zeros(self.population_size, dtype=np.float32)
-        self.get_ratio(population_ratio, model, shadow_models, z_loader, incl_matrix, device, "Computing z ratio")
+        self.get_ratio("Z", population_ratio, model, shadow_models, z_loader, incl_matrix, device, "Computing z ratio")
 
         # Sort to efficiently compute quantiles
         population_ratio.sort()
@@ -72,7 +72,7 @@ class OnlineRMIA(BaseAttack):
 
         # Initialize attack result array
         ratio_x = np.zeros(len(data), dtype=np.float32)
-        self.get_ratio(ratio_x, model, shadow_models, data_loader, incl_matrix, device, "Computing x ratio")
+        self.get_ratio("X", ratio_x, model, shadow_models, data_loader, incl_matrix, device, "Computing x ratio")
 
         # Get attacks results
         attack_results = np.zeros(len(data), dtype=np.float32)
@@ -83,7 +83,7 @@ class OnlineRMIA(BaseAttack):
         return attack_results
     
 
-    def get_ratio(self, ratio, model, shadow_models, loader, incl_matrix, device, description):
+    def get_ratio(self, type, ratio, model, shadow_models, loader, incl_matrix, device, description):
         ptr = 0
 
         with torch.no_grad():
@@ -92,30 +92,40 @@ class OnlineRMIA(BaseAttack):
 
                 B = imgs.size(0)
 
-                # Compute Pr(. | \theta)
+                # Compute Pr(. | \theta) for the target model.
                 logits = model(imgs)
                 probs = F.softmax(logits, dim=1)
                 conf = probs[range(B), labels].cpu().numpy()  # shape [B]
 
-                # Compute Pr(.)_{IN/OUT}
+                # Compute shadow model confidences.
                 shadow_conf = np.zeros((self.num_shadow_models, B), dtype=np.float32) # [num_shadow_models, B]
                 for idx, sm in enumerate(shadow_models):
                     probs_sm = F.softmax(sm(imgs), dim=1) # [B, num_classes]
                     conf_sm = probs_sm[range(B), labels].cpu().numpy() # [B]
                     shadow_conf[idx] = conf_sm # [num_shadow_models, B]
 
-                # Compute Pr(.)_{IN} and Pr(.)_{OUT}
                 pr = np.zeros(B, dtype=np.float32)
 
-                is_in_model = incl_matrix[:, ptr: ptr + B]  # [num_shadow, batch_size]
-                confs_in = shadow_conf * is_in_model
-                confs_out = shadow_conf * (~is_in_model)
+                if type == "X":
+                    # Compute Pr(x)_{IN} and Pr(x)_{OUT}
+                    # For target samples, use incl_matrix to separate models that included the sample.
+                    is_in_model = incl_matrix[:, ptr: ptr + B]  # [num_shadow, batch_size]
+                    confs_in = shadow_conf * is_in_model
+                    confs_out = shadow_conf * (~is_in_model)
 
-                pr_in = confs_in.mean(axis=0)
-                pr_out = confs_out.mean(axis=0)
+                    pr_in = confs_in.mean(axis=0)
+                    pr_out = confs_out.mean(axis=0)
 
-                # Compute Pr(.)
-                pr = 0.5 * (pr_in + pr_out)
+                    # Compute Pr(x)
+                    pr = 0.5 * (pr_in + pr_out)
+                elif type == "Z":
+                    # Compute Pr(z)
+                    # For population samples, simply average over all shadow models.
+                    pr = shadow_conf.mean(axis=0)
+                else:
+                    error_msg = f"Invalid type '{type}' provided to get_ratio. Expected 'X' or 'Z'."
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
 
                 # Compute Pr(. | \theta) / Pr(.)
                 ratio[ptr: ptr + B] = conf / np.maximum(pr, 1e-12)

@@ -62,7 +62,7 @@ class OfflineRMIA(BaseAttack):
 
         # Compute population ratio
         population_ratio = np.zeros(self.population_size, dtype=np.float32)
-        self.get_ratio(population_ratio, model, shadow_models, z_loader, device, "Computing z ratio")
+        self.get_ratio("Z", population_ratio, model, shadow_models, z_loader, device, "Computing z ratio")
 
         # Sort to efficiently compute quantiles
         population_ratio.sort()
@@ -76,7 +76,7 @@ class OfflineRMIA(BaseAttack):
 
         # Initialize attack result array
         ratio_x = np.zeros(len(data), dtype=np.float32)
-        self.get_ratio(ratio_x, model, shadow_models, data_loader, device, "Computing x ratio")
+        self.get_ratio("X", ratio_x, model, shadow_models, data_loader, device, "Computing x ratio")
 
         # Get attacks results
         attack_results = np.zeros(len(data), dtype=np.float32)
@@ -87,7 +87,7 @@ class OfflineRMIA(BaseAttack):
         return attack_results
     
     
-    def get_ratio(self, ratio, model, shadow_models, loader, device, description):
+    def get_ratio(self, type, ratio, model, shadow_models, loader, device, description):
         ptr = 0
 
         with torch.no_grad():
@@ -96,11 +96,11 @@ class OfflineRMIA(BaseAttack):
 
                 B = imgs.size(0)
 
-                # Compute Pr(. | \theta)
+                # Compute Pr(. | \theta) for the target model.
                 target = F.softmax(model(imgs), dim=1) # [B, num_classes]
                 conf = target[range(B), labels].cpu().numpy() # [B]
 
-                # Compute Pr(.)_{IN/OUT}
+                # Compute shadow model confidences.
                 shadow_conf = np.zeros((self.num_shadow_models, B), dtype=np.float32) # [num_shadow_models, B]
                 for idx, sm in enumerate(shadow_models):
                     probs_sm = F.softmax(sm(imgs), dim=1) # [B, num_classes]
@@ -109,10 +109,17 @@ class OfflineRMIA(BaseAttack):
 
                 pr_out = shadow_conf.mean(axis=0) # [B]
 
-                # Apply linear correction
-                pr = 0.5 * ((1.0 + self.a_param) * pr_out + (1.0 - self.a_param))
+                if type == "X":
+                    # Apply linear correction for target samples.
+                    pr = 0.5 * ((1.0 + self.a_param) * pr_out + (1.0 - self.a_param))
+                elif type == "Z":
+                    pr = pr_out
+                else:
+                    error_msg = f"Invalid type '{type}' provided to get_ratio. Expected 'X' or 'Z'."
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
 
-                # Compute Pr(. | \theta) / Pr(.)
+                # # Compute ratio = Pr(. | θ) / Pr(.)
                 ratio[ptr: ptr+B] = conf / np.maximum(pr, 1e-12)
 
                 ptr += B
