@@ -131,7 +131,7 @@ class OnlineRMIA(BaseAttack):
                 ptr += B
 
 
-    def get_z_loader(self, data_out, population_size, batch_size):
+    def get_z_loader(self, data_out, batch_size):
         z_loader = get_data_loader(data_out, batch_size=self.batch_size, shuffle=False)
         return z_loader
     
