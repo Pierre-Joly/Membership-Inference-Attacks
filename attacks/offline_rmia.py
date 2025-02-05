@@ -100,7 +100,7 @@ class OfflineRMIA(BaseAttack):
                 target = F.softmax(model(imgs), dim=1) # [B, num_classes]
                 conf = target[range(B), labels].cpu().numpy() # [B]
 
-                # Compute Pr(.)_{OUT}
+                # Compute Pr(.)_{IN/OUT}
                 shadow_conf = np.zeros((self.num_shadow_models, B), dtype=np.float32) # [num_shadow_models, B]
                 for idx, sm in enumerate(shadow_models):
                     probs_sm = F.softmax(sm(imgs), dim=1) # [B, num_classes]

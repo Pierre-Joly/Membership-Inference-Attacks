@@ -97,14 +97,14 @@ class OnlineRMIA(BaseAttack):
                 probs = F.softmax(logits, dim=1)
                 conf = probs[range(B), labels].cpu().numpy()  # shape [B]
 
-                # Compute Pr(.)_{OUT}
+                # Compute Pr(.)_{IN/OUT}
                 shadow_conf = np.zeros((self.num_shadow_models, B), dtype=np.float32) # [num_shadow_models, B]
                 for idx, sm in enumerate(shadow_models):
                     probs_sm = F.softmax(sm(imgs), dim=1) # [B, num_classes]
                     conf_sm = probs_sm[range(B), labels].cpu().numpy() # [B]
                     shadow_conf[idx] = conf_sm # [num_shadow_models, B]
 
-                # Compute Pr(.)_{IN} and Pr(z)_{OUT}
+                # Compute Pr(.)_{IN} and Pr(.)_{OUT}
                 pr = np.zeros(B, dtype=np.float32)
 
                 is_in_model = incl_matrix[:, ptr: ptr + B]  # [num_shadow, batch_size]
@@ -114,10 +114,10 @@ class OnlineRMIA(BaseAttack):
                 pr_in = confs_in.mean(axis=0)
                 pr_out = confs_out.mean(axis=0)
 
-                # Compute Pr(z)
+                # Compute Pr(.)
                 pr = 0.5 * (pr_in + pr_out)
 
-                # Compute Pr(z | \theta) / Pr(z)
+                # Compute Pr(. | \theta) / Pr(.)
                 ratio[ptr: ptr + B] = conf / np.maximum(pr, 1e-12)
 
                 ptr += B
